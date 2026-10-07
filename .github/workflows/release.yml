@@ -3,7 +3,7 @@ name: Deploy Angular App to FTP
 on:
   push:
     branches:
-      - main
+      - tmp
 
 env:
   APP_NAME: orthodox-web
@@ -16,10 +16,10 @@ jobs:
 
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
 
@@ -44,23 +44,34 @@ jobs:
           FTP_USERNAME: ${{ env.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
         run: |
-          lftp -u $FTP_USERNAME,$FTP_PASSWORD $FTP_SERVER <<EOF
-          cd /ortodox
-          # Elimina todos los archivos en /ortodox, excepto los dentro de la carpeta 'api'
-          find . -type f ! -path './api/*' -exec rm -f {} +
-          # Elimina todas las carpetas en /ortodox, excepto la carpeta 'api'
-          find . -type d ! -name '.' ! -name 'api' -exec rm -rf {} +
-          quit
-          EOF
+          set -euo pipefail
+          export LFTP_PASSWORD="$FTP_PASSWORD"
+
+          entries="$(lftp -e "set cmd:fail-exit yes; cd /ortodox; cls -1; quit" \
+            "ftp://$FTP_USERNAME@$FTP_SERVER")"
+
+          script="$(mktemp)"
+          {
+            echo "set cmd:fail-exit yes"
+            echo "open ftp://$FTP_USERNAME@$FTP_SERVER"
+            echo "cd /ortodox"
+            while IFS= read -r line; do
+              name="${line%/}"
+              [ -z "$name" ] && continue
+              [ "$name" = "api" ] && continue
+              printf 'rm -rf "%s"\n' "$name"
+            done <<< "$entries"
+            echo "quit"
+          } > "$script"
+          cat "$script"
+          lftp -f "$script"
 
       - name: Deploy to FTP
-        uses: SamKirkland/FTP-Deploy-Action@4.3.0
+        uses: SamKirkland/FTP-Deploy-Action@4.3.4
         with:
           server: ${{ env.FTP_SERVER }}
           username: ${{ env.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: dist/${{ env.APP_NAME }}/browser
-          server-dir: /ortodox
-          exclude: |
-            api/**
-          method: "ftp"
+          protocol: ftp
+          local-dir: dist/${{ env.APP_NAME }}/browser/
+          server-dir: /ortodox/
