@@ -67,7 +67,7 @@ jobs:
           lftp -f "$script"
 
       - name: Deploy to FTP
-        uses: SamKirkland/FTP-Deploy-Action@4.4.0
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
           server: ${{ env.FTP_SERVER }}
           username: ${{ env.FTP_USERNAME }}
