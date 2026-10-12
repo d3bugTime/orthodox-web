@@ -3,7 +3,7 @@ name: Deploy Angular App to FTP
 on:
   push:
     branches:
-      - tmp
+      - main
 
 env:
   APP_NAME: orthodox-web

@@ -259,3 +259,7 @@ to the `tmp` branch:
 
 The `FTP_PASSWORD` is read from GitHub repository secrets and must be
 configured before the workflow can run.
+
+### Deployment Test
+
+2026/10/12
